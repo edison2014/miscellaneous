@@ -1,0 +1,27 @@
+http://grepcode.com/file/repo1.maven.org/maven2/org.apache.zookeeper/zookeeper/3.4.6/org/apache/zookeeper/server/NIOServerCnxn.java#NIOServerCnxn.RuokCommand
+ruok, envi, conf, srvr, srst, crst, dump, stat, cons, wchp, wchs, wchc, mntr, isro, 
+dc1-kafka-zook01
+
+If server is stopped for a long while, is the session still valid after the server is restarted?
+
+When creating a znode? Things to consider:
+What Type? (Sequential, Ephemeral, etc), What name?, What value? How to deal with the exception? 
+
+Interesting tricks to Write:
+
+AdminClient: 
+
+SimpleMaster: no exception handling, synchronous call, while loop;
+SyncMaster: exception handling but synchronous call; checkMaster check whether there is a znode there. If no, we have to continue, other exit;
+AsyncMaster: runForMaster -> CONNECTIONLOSS -> checkMaster -> CONNECTIONLOSS -> checkMaster -> NODENOTEXIST -> runForMaster
+		        NODEEXISTS    -> false;
+		        OK			   -> true;
+		        
+AsyncWorker: No contention, modify own's status, recursive call; while(not registered) register(); while(state not updated)update_state();
+update_status is actually update remote status, only when local status is the same copy as that in the method, it is meaningful. Thus using
+synchronized to order the set_status/update_status operations.
+
+Client: simplest;
+
+SettingUpMetaData: simple as well;
+

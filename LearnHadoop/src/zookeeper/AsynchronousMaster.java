@@ -43,17 +43,21 @@ public class AsynchronousMaster implements Watcher {
     zk.close();
   }
 
-  public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
+  public static void main(String[] args) throws Exception {
     SynchronousMaster m = new SynchronousMaster("127.0.0.1:2181");
-    m.startZK();
-    m.runForMaster();
-    if(m.isLeader){
-      System.out.println("I'm the leader");
-      Thread.sleep(60000);
-    }else{
-      System.out.println(Thread.currentThread().getName() + " : Someone else is the leader");
+    try {
+      m.startZK();
+      m.runForMaster();
+      if (m.isLeader) {
+        System.out.println("I'm the leader");
+        Thread.sleep(60000);
+      } else {
+        System.out.println(Thread.currentThread().getName() + " : Someone else is the leader");
+      }
+    } catch (Exception e) {
+      m.stopZK();
+      throw e;
     }
-    m.stopZK();
   }
 
   @Override
@@ -61,11 +65,11 @@ public class AsynchronousMaster implements Watcher {
     System.out.println(zk.getSessionId() + " " + e);
   }
 
-  StringCallback masterCreateCallback = new StringCallback(){
-    public void processResult(int rc, String path, Object ctx, String name){
-      switch(Code.get(rc)){
+  StringCallback masterCreateCallback = new StringCallback() {
+    public void processResult(int rc, String path, Object ctx, String name) {
+      switch (Code.get(rc)) {
         case CONNECTIONLOSS:
-          checkMaster();
+          checkMaster();    // mutual recursive call; isLeader default is false;
           return;
         case OK:
           isLeader = true;
@@ -76,14 +80,15 @@ public class AsynchronousMaster implements Watcher {
       System.out.println("I'm" + (isLeader ? "" : "not ") + "the leader");
     }
   };
-  void runForMaster(){
-    zk.create("/master", serverId.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, masterCreateCallback, null);
+  void runForMaster() {
+    zk.create("/master", serverId.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL,
+        masterCreateCallback, null);
   }
 
-  
-  DataCallback masterCheckCallback = new DataCallback() { 
-    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat){
-      switch(Code.get(rc)){
+
+  DataCallback masterCheckCallback = new DataCallback() {
+    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
+      switch (Code.get(rc)) {
         case CONNECTIONLOSS:
           checkMaster();
           return;
@@ -93,7 +98,8 @@ public class AsynchronousMaster implements Watcher {
       }
     }
   };
-  void checkMaster(){
+
+  void checkMaster() {
     zk.getData("/master", false, masterCheckCallback, null);
   }
 }

@@ -33,12 +33,6 @@ public class AsyncWorker implements Watcher {
 		LOG.info(arg0 + ", " + hostPort);
 	}
 
-	void register(){
-		zk.create("/workers/worker-" + serverId, "Idle".getBytes(),
-				Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL,
-				createWorkerCallback, null);
-	}
-
 	StringCallback createWorkerCallback = new StringCallback() {
 		public void processResult(int rc, String path, Object ctx, String name) {
 			switch (Code.get(rc)) {
@@ -57,6 +51,11 @@ public class AsyncWorker implements Watcher {
 			}
 		}
 	};
+    void register(){
+      zk.create("/workers/worker-" + serverId, "Idle".getBytes(),
+              Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL,
+              createWorkerCallback, null);
+    }
 
 	StatCallback statusUpdateCallback = new StatCallback() {
 		public void processResult(int rc, String path, Object ctx, Stat stat){
@@ -67,15 +66,14 @@ public class AsyncWorker implements Watcher {
 			}
 		}
 	};
-
-	private String status;
-	
 	synchronized private void updateStatus(String status) {
 		if(status == this.status){
 			zk.setData("/workers/worker-" + serverId, status.getBytes(), -1, statusUpdateCallback, status);
 		}
 	}
 	
+    private String status;
+    
 	public void setStatus(String status){
 		this.status = status;
 		updateStatus(status);

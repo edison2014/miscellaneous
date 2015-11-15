@@ -2,7 +2,6 @@ package zookeeper;
 
 import java.util.Date;
 
-import org.slf4j.LoggerFactory;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
