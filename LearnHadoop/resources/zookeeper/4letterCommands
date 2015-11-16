@@ -25,3 +25,19 @@ Client: simplest;
 
 SettingUpMetaData: simple as well;
 
+Efficient notification from ZooKeeper for Master.
+
+Lifetime of watches.
+Outstanding watches -> outstanding events -> reregistering.
+
+Notification -> fetch task using get children and simultaneously reregister the watch thus miss no tasks.
+
+Different methods trigger different events. Events to methods correspondence. 
+
+A Common Pattern: put watcher and callback function into an asynchronous call. 
+
+Why there is only one shot of a watcher? To keep order of notification. Otherwise the notification received might be out of order!!!!!
+
+multi to group operations to reduce race conditions. 
+
+Spike of notification, queuing, every client only watch the previous node, space is still a problem if there are too many outstanding watches.
