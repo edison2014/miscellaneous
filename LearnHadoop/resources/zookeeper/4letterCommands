@@ -41,3 +41,49 @@ Why there is only one shot of a watcher? To keep order of notification. Otherwis
 multi to group operations to reduce race conditions. 
 
 Spike of notification, queuing, every client only watch the previous node, space is still a problem if there are too many outstanding watches.
+
+State change is applied at the same order but at different times, will the application perceive the same state across different server at the same time ?
+
+No hidden channel.Set watch instead of direct communication, all communication should via zookeeper. No cheating. 
+Thus if c1 made a change, this change will propagate to c2 eventually. (But what about session migration? if events happen during migration,
+watcher will be triggered, otherwise watcher is reregistered)
+
+Order of writes/reads/notification
+
+If a client has one watcher on /a and one watcher on /b, if there are two state changes u and u' happened to /a and /b sequentially. What's the order
+of these two notifications? Assuming there is only one watcher, then only when the client receives the notification, can he/she get the state of /b by
+reading /b. Use watchers to implement safety properties.
+
+zookeeper node is created and deleted, don't want invalid configuration to be read by clients. Use "invalid" znode watcher to ensure order. 
+update children configuration nodes, first put an "invalid" znode under the direcotry, after the configuration is completed, get rid of the
+"invalid" node; or use multiop to execute the bunch of operations atomically instead of using a znode to mark some state as partially modified.
+The latter approach is preferred and always work for atomicity problem. On the other hand, the notification mechanism is more general and not
+constrained to atomicity.
+
+zookeeper sends notification sequentially, read update (state change) by watcher. 
+Use notification to ensure liveness. If a task is submitted but not executed, then no progress. Notification can be used for both safety and liveness.
+
+Use watcher as a replacement of cache. Alternative: server in charge of caching, coherence might be a problem. Invalidation by broadcasting invalidation requests.
+Or keep track of the cache content of each client.Notification can be performed synchronously (many clients at different pace) or asynchronously (and on the client
+side). Notifications are "queueed" for clients and such notifications are consumed asynchronously. 
+
+An Alternative Way: Multiop
+Application delete a parent znode and its children. Class 1. CreateOp (create, delete, setData) 2.CreateOp.create(), DeleteOp.delete(), ...
+3. list.add(CreateOp); list.add(DeleteOp); 4. list.multi();
+
+Zookeeper practice:
+
+Op.delete(z, -1); List<OpResult> results = zk.multi(); DeleteResult extends OpResult; DeleteResult offers only equals and hashCode methods.
+CreateResult exposes the path of the operation and a Stat object. In the presence of errors, ZooKeeper returns an instance of ErrorResult
+containing an error code. Multi call also has an asynchronous version: public void multi(Iterable<Op> ops, MultiCallback cb, Object ctx);
+
+Notification sequence and update sequence. 
+
+Transaction t = new Transaction();
+t.delete("/a/b", -1);
+t.delete("/a", -1);
+List<OpResult> results = t.commit(); --> asynchronous version: public void commit(MultiCallback cb, Object ctx);
+
+application: move task to assign should use a transaction. 
+
+
